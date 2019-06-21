@@ -1,7 +1,18 @@
-'''
-Adapted from DeeperCut by Eldar Insafutdinov
+
+"""
+DeepLabCut2.0 Toolbox (deeplabcut.org)
+© A. & M. Mathis Labs
+https://github.com/AlexEMG/DeepLabCut
+Please see AUTHORS for contributors.
+
+https://github.com/AlexEMG/DeepLabCut/blob/master/AUTHORS
+Licensed under GNU Lesser General Public License v3.0
+
+Adopted from DeeperCut by Eldar Insafutdinov
 https://github.com/eldar/pose-tensorflow
-'''
+"""
+
+
 import os
 import logging
 import random as rand
@@ -188,18 +199,12 @@ class PoseDataset:
             return self.make_batch(data_item, scale, mirror)
 
     def is_valid_size(self, image_size, scale):
-        im_width = image_size[2]
-        im_height = image_size[1]
-
-        max_input_size = 100
-        if im_height < max_input_size or im_width < max_input_size:
-            return False
-
-        if hasattr(self.cfg, 'max_input_size'):
-            max_input_size = self.cfg.max_input_size
-            input_width = im_width * scale
-            input_height = im_height * scale
-            if input_height * input_width > max_input_size * max_input_size:
+        if hasattr(self.cfg, 'min_input_size') and hasattr(self.cfg, 'max_input_size'):
+            input_width = image_size[2] * scale
+            input_height = image_size[1] * scale
+            if input_height < self.cfg.min_input_size or input_width < self.cfg.min_input_size:
+                return False
+            if input_height * input_width > self.cfg.max_input_size**2:
                 return False
 
         return True
