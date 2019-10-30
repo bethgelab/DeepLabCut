@@ -115,8 +115,7 @@ class MainFrame(wx.Frame):
 
     def show_image(self):
         self.figure,self.axes,self.canvas = self.image_panel.getfigure()
-        frame=cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)
-        self.ax = self.axes.imshow(frame)
+        self.ax = self.axes.imshow(self.image)
         self.figure.canvas.draw()
         self.cid = RectangleSelector(self.axes, self.line_select_callback,drawtype='box', useblit=False,button=[1], minspanx=5, minspany=5,spancoords='pixels',interactive=True)
         self.canvas.mpl_connect('key_press_event', self.cid)
@@ -138,8 +137,6 @@ class MainFrame(wx.Frame):
         wx.MessageBox('1. Use left click to select the region of interest. A red box will be drawn around the selected region. \n\n2. Use the corner points to expand the box and center to move the box around the image. \n\n3. Click ''Save parameters and Quit'' to save the croppeing parameters and close the GUI. \n\n Click OK to continue', 'Instructions to use!', wx.OK | wx.ICON_INFORMATION)
 
 def show(config,image):
-    import imageio
-    imageio.plugins.ffmpeg.download()
     app = wx.App()
     MainFrame(None,config,image).Show()
     app.MainLoop()
