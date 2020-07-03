@@ -1,17 +1,29 @@
-import pandas as pd
-import numpy as np
-from tqdm import tqdm
-import os
-from pathlib import Path
+"""
+DeepLabCut2.0 Toolbox (deeplabcut.org)
+© A. & M. Mathis Labs
+https://github.com/AlexEMG/DeepLabCut
+Please see AUTHORS for contributors.
+
+https://github.com/AlexEMG/DeepLabCut/blob/master/AUTHORS
+Licensed under GNU Lesser General Public License v3.0
+
+Written by Federico Claudi - https://github.com/FedeClaudi
+"""
+
 import argparse
+from math import atan2, degrees
+from pathlib import Path
+import os
+import numpy as np
+import pandas as pd
 from scipy.spatial import distance
-from math import factorial, atan2, degrees, acos, sqrt, pi
 
 from deeplabcut.utils import auxiliaryfunctions
 
+
 # utility functions
 def calc_distance_between_points_two_vectors_2d(v1, v2):
-    '''calc_distance_between_points_two_vectors_2d [pairwise distance between vectors points]
+    """calc_distance_between_points_two_vectors_2d [pairwise distance between vectors points]
 
     Arguments:
         v1 {[np.array]} -- [description]
@@ -30,15 +42,15 @@ def calc_distance_between_points_two_vectors_2d(v1, v2):
     >>> v2 = np.zeros((2, 5))
     >>> v2[1, :]  = [0, 10, 25, 50, 100]
     >>> d = calc_distance_between_points_two_vectors_2d(v1.T, v2.T)
-    '''
+    """
 
     # Check dataformats
     if not isinstance(v1, np.ndarray) or not isinstance(v2, np.ndarray):
-        raise ValueError('Invalid argument data format')
+        raise ValueError("Invalid argument data format")
     if not v1.shape[1] == 2 or not v2.shape[1] == 2:
-        raise ValueError('Invalid shape for input arrays')
+        raise ValueError("Invalid shape for input arrays")
     if not v1.shape[0] == v2.shape[0]:
-        raise ValueError('Error: input arrays should have the same length')
+        raise ValueError("Error: input arrays should have the same length")
 
     # Calculate distance
     dist = [distance.euclidean(p1, p2) for p1, p2 in zip(v1, v2)]
@@ -46,7 +58,7 @@ def calc_distance_between_points_two_vectors_2d(v1, v2):
 
 
 def angle_between_points_2d_anticlockwise(p1, p2):
-    '''angle_between_points_2d_clockwise [Determines the angle of a straight line drawn between point one and two.
+    """angle_between_points_2d_clockwise [Determines the angle of a straight line drawn between point one and two.
         The number returned, which is a double in degrees, tells us how much we have to rotate
         a horizontal line anti-clockwise for it to match the line between the two points.]
 
@@ -64,7 +76,7 @@ def angle_between_points_2d_anticlockwise(p1, p2):
         >>> twoseventy = angle_between_points_2d_clockwise([-1, 0], [0, 1])
         >>> ninety2 = angle_between_points_2d_clockwise([10, 0], [10, 1])
         >>> print(ninety2)
-    '''
+    """
 
     """
         Determines the angle of a straight line drawn between point one and two.
@@ -75,14 +87,14 @@ def angle_between_points_2d_anticlockwise(p1, p2):
     xDiff = p2[0] - p1[0]
     yDiff = p2[1] - p1[1]
     ang = degrees(atan2(yDiff, xDiff))
-    if ang < 0: ang += 360
+    if ang < 0:
+        ang += 360
     # if not 0 <= ang <+ 360: raise ValueError('Ang was not computed correctly')
     return ang
 
 
-
 def calc_angle_between_vectors_of_points_2d(v1, v2):
-    '''calc_angle_between_vectors_of_points_2d [calculates the clockwise angle between each set of point for two 2d arrays of points]
+    """calc_angle_between_vectors_of_points_2d [calculates the clockwise angle between each set of point for two 2d arrays of points]
 
     Arguments:
         v1 {[np.ndarray]} -- [2d array with X,Y position at each timepoint]
@@ -98,15 +110,22 @@ def calc_angle_between_vectors_of_points_2d(v1, v2):
     >>> v2[0, :] = [0, 1, 0, -1]
     >>> v2[1, :] = [1, 0, -1, 0]
     >>> a = calc_angle_between_vectors_of_points_2d(v2, v1)
-    '''
+    """
 
     # Check data format
-    if v1 is None or v2 is None or not isinstance(v1, np.ndarray) or not isinstance(v2, np.ndarray):
-        raise ValueError('Invalid format for input arguments')
+    if (
+        v1 is None
+        or v2 is None
+        or not isinstance(v1, np.ndarray)
+        or not isinstance(v2, np.ndarray)
+    ):
+        raise ValueError("Invalid format for input arguments")
     if len(v1) != len(v2):
-        raise ValueError('Input arrays should have the same length, instead: ', len(v1), len(v2))
+        raise ValueError(
+            "Input arrays should have the same length, instead: ", len(v1), len(v2)
+        )
     if not v1.shape[0] == 2 or not v2.shape[0] == 2:
-        raise ValueError('Invalid shape for input arrays: ', v1.shape, v2.shape)
+        raise ValueError("Invalid shape for input arrays: ", v1.shape, v2.shape)
 
     # Calculate
     n_points = v1.shape[1]
@@ -138,17 +157,27 @@ def analyzebone(bp1, bp2):
     likelihood = np.min(likelihoods, 1)
 
     # Create dataframe and return
-    df = pd.DataFrame.from_dict(dict(
-                                    length=bone_length,
-                                    orientation=bone_orientation,
-                                    likelihood=likelihood,
-                                    ))
+    df = pd.DataFrame.from_dict(
+        dict(length=bone_length, orientation=bone_orientation, likelihood=likelihood,)
+    )
     # df.index.name=name
 
     return df
 
+
 # MAIN FUNC
-def analyzeskeleton(config, videos, videotype='avi', shuffle=1, trainingsetindex=0, save_as_csv=False, destfolder=None):
+def analyzeskeleton(
+    config,
+    videos,
+    videotype="avi",
+    shuffle=1,
+    trainingsetindex=0,
+    filtered=False,
+    save_as_csv=False,
+    destfolder=None,
+    modelprefix="",
+    track_method="",
+):
     """
     Extracts length and orientation of each "bone" of the skeleton as defined in the config file.
 
@@ -167,42 +196,75 @@ def analyzeskeleton(config, videos, videotype='avi', shuffle=1, trainingsetindex
     trainingsetindex: int, optional
         Integer specifying which TrainingsetFraction to use. By default the first (note that TrainingFraction is a list in config.yaml).
 
+    filtered: bool, default false
+        Boolean variable indicating if filtered output should be plotted rather than frame-by-frame predictions. Filtered version can be calculated with deeplabcut.filterpredictions
+
     save_as_csv: bool, optional
         Saves the predictions in a .csv file. The default is ``False``; if provided it must be either ``True`` or ``False``
 
     destfolder: string, optional
         Specifies the destination folder for analysis data (default is the path of the video). Note that for subsequent analysis this
         folder also needs to be passed.
+
+    track_method: string, optional
+        Specifies the tracker used to generate the data. Empty by default (corresponding to
+        a single animal project). For multiple animals, must be either 'box' or 'skeleton'.
     """
     # Load config file, scorer and videos
     cfg = auxiliaryfunctions.read_config(config)
-    DLCscorer,DLCscorerlegacy=auxiliaryfunctions.GetScorerName(cfg,shuffle,trainFraction = cfg['TrainingFraction'][trainingsetindex])
+    if not cfg['skeleton']:
+        raise ValueError('No skeleton defined in the config.yaml.')
 
-    Videos=auxiliaryfunctions.Getlistofvideos(videos,videotype)
+    DLCscorer, DLCscorerlegacy = auxiliaryfunctions.GetScorerName(
+        cfg,
+        shuffle,
+        trainFraction=cfg["TrainingFraction"][trainingsetindex],
+        modelprefix=modelprefix,
+    )
+
+    Videos = auxiliaryfunctions.Getlistofvideos(videos, videotype)
     for video in Videos:
-        print("Processing %s"%(video))
+        print("Processing %s" % (video))
         if destfolder is None:
-            destfolder= str(Path(video).parents[0])
+            destfolder = str(Path(video).parents[0])
 
-        vname=Path(video).stem
-        notanalyzed,outdataname,sourcedataname,scorer=auxiliaryfunctions.CheckifPostProcessing(destfolder,vname,DLCscorer,DLCscorerlegacy,suffix='_skeleton')
-        if notanalyzed:
-                Dataframe = pd.read_hdf(sourcedataname,'df_with_missing')
-                # Process skeleton
-                bones = {}
-                for bp1, bp2 in cfg['skeleton']:
+        vname = Path(video).stem
+        try:
+            df, filepath, scorer, _ = auxiliaryfunctions.load_analyzed_data(
+                destfolder, vname, DLCscorer, filtered, track_method
+            )
+            output_name = filepath.replace(".h5", f"_skeleton.h5")
+            if os.path.isfile(output_name):
+                print(f"Skeleton in video {vname} already processed. Skipping...")
+                continue
+
+            bones = {}
+            if 'individuals' in df.columns.names:
+                for animal_name, df_ in df.groupby(level='individuals', axis=1):
+                    temp = df_.droplevel(['scorer', 'individuals'], axis=1)
+                    if animal_name != 'single':
+                        for bp1, bp2 in cfg["skeleton"]:
+                            name = "{}_{}_{}".format(animal_name, bp1, bp2)
+                            bones[name] = analyzebone(temp[bp1], temp[bp2])
+            else:
+                for bp1, bp2 in cfg["skeleton"]:
                     name = "{}_{}".format(bp1, bp2)
-                    bones[name] = analyzebone(Dataframe[scorer][bp1], Dataframe[scorer][bp2])
+                    bones[name] = analyzebone(
+                        df[scorer][bp1], df[scorer][bp2]
+                    )
 
-                skeleton = pd.concat(bones, axis=1)
-                # save
-                skeleton.to_hdf(outdataname, 'df_with_missing', format='table', mode='w')
-                if save_as_csv:
-                    skeleton.to_csv(outdataname.split('.h5')[0]+'.csv')
+            skeleton = pd.concat(bones, axis=1)
+            skeleton.to_hdf(output_name, "df_with_missing", format="table", mode="w")
+            if save_as_csv:
+                skeleton.to_csv(output_name.replace(".h5", ".csv"))
+
+        except FileNotFoundError as e:
+            print(e)
+            continue
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('config')
-    parser.add_argument('videos')
+    parser.add_argument("config")
+    parser.add_argument("videos")
     cli_args = parser.parse_args()
